@@ -638,7 +638,7 @@ export class TerminalService implements ITerminalService {
 	@debounce(500)
 	private _saveState(): void {
 		// Avoid saving state when shutting down as that would override process state to be revived
-		if (this._isShuttingDown) {
+		if (this._isShuttingDown || this._connectionState === TerminalConnectionState.Connecting) {
 			return;
 		}
 		if (!this.configHelper.config.enablePersistentSessions) {

@@ -278,7 +278,7 @@ export class TerminalService implements ITerminalService {
 		this._connectionState = TerminalConnectionState.Connecting;
 
 		const isPersistentRemote = !!this._environmentService.remoteAuthority && enableTerminalReconnection;
-
+		console.log(isPersistentRemote, !!this._environmentService.remoteAuthority && enableTerminalReconnection);
 		if (isPersistentRemote) {
 			this._remoteTerminalsInitPromise = this._reconnectToRemoteTerminals();
 		} else if (enableTerminalReconnection) {
@@ -376,6 +376,7 @@ export class TerminalService implements ITerminalService {
 
 	private async _reconnectToRemoteTerminals(): Promise<void> {
 		const layoutInfo = await this._remoteTerminalService.getTerminalLayoutInfo();
+		console.log('reconnecting', JSON.stringify(layoutInfo));
 		this._remoteTerminalService.reduceConnectionGraceTime();
 		const reconnectCounter = await this._recreateTerminalGroups(layoutInfo);
 		/* __GDPR__

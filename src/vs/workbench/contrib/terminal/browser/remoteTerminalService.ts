@@ -299,7 +299,7 @@ export class RemoteTerminalService extends Disposable implements IRemoteTerminal
 		if (!this._remoteTerminalChannel) {
 			throw new Error(`Cannot call setActiveInstanceId when there is no remote`);
 		}
-
+		console.log('setting terminal layout info', JSON.stringify(layout));
 		return this._remoteTerminalChannel.setTerminalLayoutInfo(layout);
 	}
 

@@ -282,8 +282,7 @@ export class RemoteTerminalChannelClient {
 			workspaceId: workspace.id,
 			tabs: layout.tabs
 		};
-		console.log('setting layout info', args);
-		return this._channel.call<void>('$setTerminalLayoutInfo', args);
+		return this._channel.call<void>('$setTerminalLayoutInfo', [args]);
 	}
 
 	updateTitle(id: number, title: string): Promise<string> {
@@ -307,8 +306,7 @@ export class RemoteTerminalChannelClient {
 		const args: IGetTerminalLayoutInfoArgs = {
 			workspaceId: workspace.id,
 		};
-		console.log('getting layout info', args);
-		return this._channel.call<ITerminalsLayoutInfo>('$getTerminalLayoutInfo', args);
+		return this._channel.call<ITerminalsLayoutInfo>('$getTerminalLayoutInfo', [args]);
 	}
 
 	reviveTerminalProcesses(state: string): Promise<void> {

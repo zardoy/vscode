@@ -317,6 +317,7 @@ export class RemoteTerminalService extends Disposable implements IRemoteTerminal
 
 		// Revive processes if needed
 		const serializedState = this._storageService.get(TerminalStorageKeys.TerminalBufferState, StorageScope.WORKSPACE);
+		console.log('serializedState', serializedState);
 		if (serializedState) {
 			try {
 				await this._remoteTerminalChannel.reviveTerminalProcesses(serializedState);

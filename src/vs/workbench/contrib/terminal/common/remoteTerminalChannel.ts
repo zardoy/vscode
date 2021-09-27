@@ -282,6 +282,7 @@ export class RemoteTerminalChannelClient {
 			workspaceId: workspace.id,
 			tabs: layout.tabs
 		};
+		console.log('setting layout info', args);
 		return this._channel.call<void>('$setTerminalLayoutInfo', args);
 	}
 
@@ -306,6 +307,7 @@ export class RemoteTerminalChannelClient {
 		const args: IGetTerminalLayoutInfoArgs = {
 			workspaceId: workspace.id,
 		};
+		console.log('getting layout info', args);
 		return this._channel.call<ITerminalsLayoutInfo>('$getTerminalLayoutInfo', args);
 	}
 

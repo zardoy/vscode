@@ -415,6 +415,7 @@ export const enum TerminalCommandId {
 	ResizePaneUp = 'workbench.action.terminal.resizePaneUp',
 	CreateWithProfileButton = 'workbench.action.terminal.createProfileButton',
 	SizeToContentWidth = 'workbench.action.terminal.sizeToContentWidth',
+	SizeToContentWidthEditor = 'workbench.action.terminal.sizeToContentWidthEditor',
 	SizeToContentWidthInstance = 'workbench.action.terminal.sizeToContentWidthInstance',
 	ResizePaneDown = 'workbench.action.terminal.resizePaneDown',
 	Focus = 'workbench.action.terminal.focus',

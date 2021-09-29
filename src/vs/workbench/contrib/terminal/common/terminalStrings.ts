@@ -57,8 +57,12 @@ export const terminalStrings = {
 		value: localize('workbench.action.terminal.rename', "Rename..."),
 		original: 'Rename...'
 	},
-	sizeToContentWidth: {
-		value: localize('workbench.action.terminal.sizeToContentWidthInstance', "Fixed Content Width"),
+	fixedContentWidth: {
+		value: localize('workbench.action.terminal.fixedContentWidth', "Fixed Content Width"),
 		original: 'Fixed Content Width'
+	},
+	sizeToContentWidth: {
+		value: localize('workbench.action.terminal.sizeToContentWidth', "Toggle Size to Content Width"),
+		original: 'Toggle Size to Content Width'
 	}
 };

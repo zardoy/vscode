@@ -638,14 +638,6 @@ export function setupTerminalMenus(): void {
 		when: ResourceContextKey.Scheme.isEqualTo(Schemas.vscodeTerminal),
 		group: '3_files'
 	});
-	MenuRegistry.appendMenuItem(MenuId.EditorTitleContext, {
-		command: {
-			id: TerminalCommandId.SizeToContentWidth,
-			title: terminalStrings.sizeToContentWidth
-		},
-		when: ResourceContextKey.Scheme.isEqualTo(Schemas.vscodeTerminal),
-		group: '3_files'
-	});
 
 	MenuRegistry.appendMenuItem(MenuId.EditorTitle, {
 		command: {

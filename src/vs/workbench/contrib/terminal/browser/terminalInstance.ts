@@ -894,7 +894,6 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 		}));
 
 		this._register(dom.addDisposableListener(xterm.textarea, 'blur', () => {
-			this._terminalFocusContextKey.reset();
 			this._onDidBlur.fire(this);
 			this._refreshSelectionContextKey();
 		}));

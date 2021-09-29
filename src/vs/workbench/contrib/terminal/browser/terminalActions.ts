@@ -1854,7 +1854,7 @@ export function registerTerminalActions() {
 		constructor() {
 			super({
 				id: TerminalCommandId.SizeToContentWidth,
-				title: { value: localize('workbench.action.terminal.sizeToContentWidth', "Toggle Size to Content Width"), original: 'Toggle Size to Content Width' },
+				title: terminalStrings.sizeToContentWidth,
 				f1: true,
 				category,
 				precondition: ContextKeyExpr.and(TerminalContextKeys.processSupported, TerminalContextKeys.isOpen, TerminalContextKeys.focus),
@@ -1871,17 +1871,33 @@ export function registerTerminalActions() {
 	registerAction2(class extends Action2 {
 		constructor() {
 			super({
+				id: TerminalCommandId.SizeToContentWidthEditor,
+				title: terminalStrings.fixedContentWidth,
+				f1: false,
+				category,
+				precondition: ContextKeyExpr.and(TerminalContextKeys.processSupported, TerminalContextKeys.isOpen),
+				toggled: TerminalContextKeys.terminalHasFixedWidth,
+				menu: {
+					id: MenuId.EditorTitleContext,
+					when: ResourceContextKey.Scheme.isEqualTo(Schemas.vscodeTerminal),
+					group: '3_files'
+				}
+			});
+		}
+		async run(accessor: ServicesAccessor) {
+			await accessor.get(ITerminalService).doWithActiveInstance(t => t.toggleSizeToContentWidth());
+		}
+	});
+	registerAction2(class extends Action2 {
+		constructor() {
+			super({
 				id: TerminalCommandId.SizeToContentWidthInstance,
-				title: terminalStrings.sizeToContentWidth,
+				title: terminalStrings.fixedContentWidth,
 				f1: false,
 				category,
 				toggled: TerminalContextKeys.terminalHasFixedWidth,
 				precondition: ContextKeyExpr.and(TerminalContextKeys.processSupported, TerminalContextKeys.isOpen),
-				menu: [{
-					id: MenuId.TerminalTabContext
-				}, {
-					id: MenuId.TerminalInlineTabContext
-				}]
+				menu: [{ id: MenuId.TerminalTabContext }, { id: MenuId.TerminalInlineTabContext }]
 			});
 		}
 		async run(accessor: ServicesAccessor) {

@@ -22,6 +22,7 @@ import { createFileSystemProviderError, FileDeleteOptions, FileOpenOptions, File
 import { readFileIntoStream } from 'vs/platform/files/common/io';
 import { FileWatcher as NodeJSWatcherService } from 'vs/platform/files/node/watcher/nodejs/watcherService';
 import { FileWatcher as NsfwWatcherService } from 'vs/platform/files/node/watcher/nsfw/watcherService';
+import { FileWatcher as ParcelWatcherService } from 'vs/platform/files/node/watcher/parcel/watcherService';
 import { FileWatcher as UnixWatcherService } from 'vs/platform/files/node/watcher/unix/watcherService';
 import { IDiskFileChange, ILogMessage, IWatchRequest, toFileChanges } from 'vs/platform/files/node/watcher/watcher';
 import { FileWatcher as WindowsWatcherService } from 'vs/platform/files/node/watcher/win32/watcherService';
@@ -532,7 +533,7 @@ export class DiskFileSystemProvider extends Disposable implements
 	private readonly _onDidChangeFile = this._register(new Emitter<readonly IFileChange[]>());
 	readonly onDidChangeFile = this._onDidChangeFile.event;
 
-	private recursiveWatcher: WindowsWatcherService | UnixWatcherService | NsfwWatcherService | undefined;
+	private recursiveWatcher: WindowsWatcherService | UnixWatcherService | NsfwWatcherService | ParcelWatcherService | undefined;
 	private readonly recursiveFoldersToWatch: IWatchRequest[] = [];
 	private recursiveWatchRequestDelayer = this._register(new ThrottledDelayer<void>(0));
 
@@ -577,7 +578,7 @@ export class DiskFileSystemProvider extends Disposable implements
 	private doRefreshRecursiveWatchers(): void {
 
 		// Reuse existing
-		if (this.recursiveWatcher instanceof NsfwWatcherService) {
+		if (this.recursiveWatcher instanceof NsfwWatcherService || this.recursiveWatcher instanceof ParcelWatcherService) {
 			this.recursiveWatcher.watch(this.recursiveFoldersToWatch);
 		}
 
@@ -597,7 +598,7 @@ export class DiskFileSystemProvider extends Disposable implements
 						onLogMessage: (msg: ILogMessage) => void,
 						verboseLogging: boolean,
 						watcherOptions?: IWatcherOptions
-					): WindowsWatcherService | UnixWatcherService | NsfwWatcherService
+					): WindowsWatcherService | UnixWatcherService | NsfwWatcherService | ParcelWatcherService
 				};
 
 				let watcherOptions: IWatcherOptions | undefined = undefined;
@@ -631,7 +632,7 @@ export class DiskFileSystemProvider extends Disposable implements
 
 					// Standard Watcher
 					else {
-						watcherImpl = NsfwWatcherService;
+						watcherImpl = ParcelWatcherService; //NsfwWatcherService;
 					}
 				}
 

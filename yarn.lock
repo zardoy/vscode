@@ -417,6 +417,14 @@
   dependencies:
     "@octokit/openapi-types" "^10.2.2"
 
+"@parcel/watcher@^2.0.0-alpha.11":
+  version "2.0.0-alpha.11"
+  resolved "https://registry.yarnpkg.com/@parcel/watcher/-/watcher-2.0.0-alpha.11.tgz#8d6233d4416880810438cd2628e6a35273241ab3"
+  integrity sha512-zMIAsFLcnB82kkk0kSOZ/zgyihb8sty0zVrsz+3ruoYXkchymWsCDsxiX4v+X2s8Jppk3JE8vlnD4DKs3QTOEQ==
+  dependencies:
+    node-addon-api "^3.0.2"
+    node-gyp-build "^4.2.3"
+
 "@sindresorhus/is@^0.14.0":
   version "0.14.0"
   resolved "https://registry.yarnpkg.com/@sindresorhus/is/-/is-0.14.0.tgz#9fb3a3cf3132328151f353de4632e01e52102bea"
@@ -6944,6 +6952,11 @@ node-fetch@^2.6.1:
   version "2.6.2"
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.2.tgz#986996818b73785e47b1965cc34eb093a1d464d0"
   integrity sha512-aLoxToI6RfZ+0NOjmWAgn9+LEd30YCkJKFSyWacNZdEKTit/ZMcKjGkTRo8uWEsnIb/hfKecNPEbln02PdWbcA==
+
+node-gyp-build@^4.2.3:
+  version "4.3.0"
+  resolved "https://registry.yarnpkg.com/node-gyp-build/-/node-gyp-build-4.3.0.tgz#9f256b03e5826150be39c764bf51e993946d71a3"
+  integrity sha512-iWjXZvmboq0ja1pUGULQBexmxq8CV4xBhX7VDOTbL7ZR4FOowwY/VOtRxBN/yKxmdGoIp4j5ysNT4u3S2pDQ3Q==
 
 node-libs-browser@^2.2.1:
   version "2.2.1"

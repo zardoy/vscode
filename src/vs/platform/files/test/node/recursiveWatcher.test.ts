@@ -11,12 +11,12 @@ import { isLinux, isWindows } from 'vs/base/common/platform';
 import { Promises } from 'vs/base/node/pfs';
 import { flakySuite, getPathFromAmdModule, getRandomTestPath } from 'vs/base/test/node/testUtils';
 import { FileChangeType } from 'vs/platform/files/common/files';
-import { NsfwWatcherService } from 'vs/platform/files/node/watcher/nsfw/nsfwWatcherService';
+import { ParcelWatcherService } from 'vs/platform/files/node/watcher/parcel/parcelWatcherService';
 import { IWatchRequest } from 'vs/platform/files/node/watcher/watcher';
 
 flakySuite('Recursive Watcher', () => {
 
-	class TestNsfwWatcherService extends NsfwWatcherService {
+	class TestParcelWatcherService extends ParcelWatcherService {
 
 		testNormalizePaths(paths: string[]): string[] {
 
@@ -35,17 +35,10 @@ flakySuite('Recursive Watcher', () => {
 				await watcher.instance;
 			}
 		}
-
-		protected override getOptions(watcher: any) {
-			return {
-				...super.getOptions(watcher),
-				debounceMS: 1
-			};
-		}
 	}
 
 	let testDir: string;
-	let service: TestNsfwWatcherService;
+	let service: TestParcelWatcherService;
 
 	let loggingEnabled = false;
 
@@ -57,7 +50,7 @@ flakySuite('Recursive Watcher', () => {
 	enableLogging(false);
 
 	setup(async () => {
-		service = new TestNsfwWatcherService();
+		service = new TestParcelWatcherService();
 
 		service.onDidLogMessage(e => {
 			if (loggingEnabled) {
@@ -78,7 +71,7 @@ flakySuite('Recursive Watcher', () => {
 		return Promises.rm(testDir);
 	});
 
-	function awaitEvent(service: TestNsfwWatcherService, path: string, type: FileChangeType): Promise<void> {
+	function awaitEvent(service: TestParcelWatcherService, path: string, type: FileChangeType): Promise<void> {
 		return new Promise(resolve => {
 			const disposable = service.onDidChangeFile(events => {
 				for (const event of events) {

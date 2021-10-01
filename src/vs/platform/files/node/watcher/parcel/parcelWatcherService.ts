@@ -15,7 +15,7 @@ import { Disposable, IDisposable } from 'vs/base/common/lifecycle';
 import { TernarySearchTree } from 'vs/base/common/map';
 import { normalizeNFC } from 'vs/base/common/normalization';
 import { dirname } from 'vs/base/common/path';
-import { isMacintosh } from 'vs/base/common/platform';
+import { isLinux, isMacintosh, isWindows } from 'vs/base/common/platform';
 import { realcaseSync, realpathSync } from 'vs/base/node/extpath';
 import { FileChangeType } from 'vs/platform/files/common/files';
 import { IWatcherService } from 'vs/platform/files/node/watcher/nsfw/watcher';
@@ -27,7 +27,7 @@ interface IWatcher extends IDisposable {
 	/**
 	 * The Parcel watcher instance is resolved when the watching has started.
 	 */
-	readonly instance: Promise<parcelWatcher.AsyncSubscription>;
+	readonly instance: Promise<parcelWatcher.AsyncSubscription | undefined>;
 
 	/**
 	 * The watch request associated to the watcher.
@@ -55,13 +55,15 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 
 	private static readonly MAX_RESTARTS = 5; // number of restarts we allow before giving up in case of unexpected shutdown
 
-	private static readonly MAP_PARCEL_ACTION_TO_FILE_CHANGE = new Map<parcelWatcher.EventType, number>(
+	private static readonly MAP_PARCEL_WATCHER_ACTION_TO_FILE_CHANGE = new Map<parcelWatcher.EventType, number>(
 		[
 			['create', FileChangeType.ADDED],
 			['update', FileChangeType.UPDATED],
 			['delete', FileChangeType.DELETED],
 		]
 	);
+
+	private static readonly PARCEL_WATCHER_BACKEND = isWindows ? 'windows' : isLinux ? 'inotify' : 'fs-events';
 
 	private readonly _onDidChangeFile = this._register(new Emitter<IDiskFileChange[]>());
 	readonly onDidChangeFile = this._onDidChangeFile.event;
@@ -133,8 +135,8 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 	private startWatching(request: IWatchRequest, restarts = 0): void {
 		const cts = new CancellationTokenSource();
 
-		let parcelPromiseResolve: (watcher: parcelWatcher.AsyncSubscription) => void;
-		const instance = new Promise<parcelWatcher.AsyncSubscription>(resolve => parcelPromiseResolve = resolve);
+		let parcelWatcherPromiseResolve: (watcher: parcelWatcher.AsyncSubscription | undefined) => void;
+		const instance = new Promise<parcelWatcher.AsyncSubscription | undefined>(resolve => parcelWatcherPromiseResolve = resolve);
 
 		// Remember as watcher instance
 		const watcher: IWatcher = {
@@ -145,7 +147,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			token: cts.token,
 			dispose: () => {
 				cts.dispose(true);
-				instance.then(instance => instance.unsubscribe());
+				instance.then(instance => instance?.unsubscribe());
 			}
 		};
 		this.watchers.set(request.path, watcher);
@@ -168,6 +170,15 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 				return; // return early when disposed
 			}
 
+			if (error) {
+				// TODO@watcher what error can this be?
+				this.error(`Unexpected error in event callback: ${toErrorMessage(error)}`, watcher);
+			}
+
+			if (events.length === 0) {
+				return; // this can happen if we had an error before
+			}
+
 			for (const event of events) {
 
 				// Log the raw event before normalization or checking for ignore patterns
@@ -175,7 +186,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 					this.log(`${event.type === 'create' ? '[CREATED]' : event.type === 'delete' ? '[DELETED]' : '[CHANGED]'} ${event.path}`);
 				}
 
-				onRawFileEvent(event.path, ParcelWatcherService.MAP_PARCEL_ACTION_TO_FILE_CHANGE.get(event.type)!);
+				onRawFileEvent(event.path, ParcelWatcherService.MAP_PARCEL_WATCHER_ACTION_TO_FILE_CHANGE.get(event.type)!);
 			}
 
 			// Reset undelivered events array
@@ -185,10 +196,17 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			// Broadcast to clients normalized
 			const normalizedEvents = normalizeFileChanges(this.normalizeEvents(undeliveredFileEventsToEmit, request, realBasePathDiffers, realBasePathLength));
 			this.emitEvents(normalizedEvents);
+		}, {
+			backend: ParcelWatcherService.PARCEL_WATCHER_BACKEND,
+			ignore: watcher.request.excludes // TODO@watcher this cannot be updated dynamically it seems
 		}).then(async parcelWatcher => {
 			this.debug(`Started watching: ${request.path}`);
 
-			parcelPromiseResolve(parcelWatcher);
+			parcelWatcherPromiseResolve(parcelWatcher);
+		}).catch(error => {
+			this.onError(error);
+
+			parcelWatcherPromiseResolve(undefined);
 		});
 	}
 
@@ -213,6 +231,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 		// form, so we need to detect this early on to be able to rewrite the
 		// file events to the original requested form.
 		// Note: Other platforms do not seem to have these path issues.
+		// TODO@watcher test this on all platforms to validate it still holds true
 		if (isMacintosh) {
 			try {
 

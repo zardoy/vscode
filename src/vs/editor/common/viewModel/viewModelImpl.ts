@@ -614,8 +614,8 @@ export class ViewModel extends Disposable implements IViewModel {
 		return this._lines.getViewLinesIndentGuides(startLineNumber, endLineNumber);
 	}
 
-	public getBracketGuidesInRangeByLine(startLineNumber: number, endLineNumber: number, activePosition: IPosition | null, highlightActiveGuides: boolean, includeNonActiveGuides: boolean): IndentGuide[][] {
-		return this._lines.getViewLinesBracketGuides(startLineNumber, endLineNumber, activePosition, highlightActiveGuides, includeNonActiveGuides);
+	public getBracketGuidesInRangeByLine(startLineNumber: number, endLineNumber: number, activePosition: IPosition | null, highlightActiveGuides: boolean, includeNonActiveGuides: boolean, includeNonActiveHorizontalIndents: boolean): IndentGuide[][] {
+		return this._lines.getViewLinesBracketGuides(startLineNumber, endLineNumber, activePosition, highlightActiveGuides, includeNonActiveGuides, includeNonActiveHorizontalIndents);
 	}
 
 	public getLineContent(lineNumber: number): string {

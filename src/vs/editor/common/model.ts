@@ -1026,7 +1026,7 @@ export interface ITextModel {
 	/**
 	 * @internal
 	 */
-	getLinesBracketGuides(startLineNumber: number, endLineNumber: number, activePosition: IPosition | null, highlightActiveGuides: boolean, includeNonActiveGuides: boolean): IndentGuide[][];
+	getLinesBracketGuides(startLineNumber: number, endLineNumber: number, activePosition: IPosition | null, highlightActiveGuides: boolean, includeNonActiveGuides: boolean, includeNonActiveHorizontalIndents: boolean): IndentGuide[][];
 
 	/**
 	 * Change the decorations. The callback will be called with a change accessor
@@ -1339,7 +1339,22 @@ export interface ITextModel {
 export class IndentGuide {
 	constructor(
 		public readonly visibleColumn: number,
-		public readonly className: string
+		public readonly className: string,
+		/**
+		 * If set, this indent guide is a horizontal guide (no vertical part).
+		 * It starts at visibleColumn and continues until endColumn.
+		*/
+		public readonly horizontalLine: IndentGuideHorizontalLine | null,
+	) { }
+}
+
+/**
+ * @internal
+ */
+export class IndentGuideHorizontalLine {
+	constructor(
+		public readonly top: boolean,
+		public readonly endColumn: number,
 	) { }
 }
 

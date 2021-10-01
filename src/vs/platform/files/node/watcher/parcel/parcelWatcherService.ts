@@ -282,7 +282,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 		// we are running into a limit. We only want to warn
 		// once in this case to avoid log spam.
 		// See https://github.com/microsoft/vscode/issues/7950
-		if (msg.indexOf('Inotify limit reached') !== -1) {
+		if (msg.indexOf('No space left on device') !== -1) {
 			if (!this.enospcErrorLogged) {
 				this.error('Inotify limit reached (ENOSPC)', watcher);
 

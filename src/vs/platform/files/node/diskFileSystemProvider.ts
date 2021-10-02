@@ -609,29 +609,16 @@ export class DiskFileSystemProvider extends Disposable implements
 					watcherOptions = this.options?.watcher;
 				}
 
+				// can use efficient watcher
 				else {
-
-					// Conditionally fallback to our legacy file watcher:
-					// - If provided as option from the outside (i.e. via settings)
-					// - Linux: until we support ignore patterns (unless insiders)
-					let enableLegacyWatcher: boolean;
-					if (this.options?.enableLegacyRecursiveWatcher) {
-						enableLegacyWatcher = true;
-					} else {
-						enableLegacyWatcher = product.quality === 'stable' && isLinux;
-					}
-
-					// Legacy Watcher
-					if (enableLegacyWatcher && this.recursiveFoldersToWatch.length === 1) {
-						if (isWindows) {
-							watcherImpl = WindowsWatcherService;
-						} else {
+					const enableLegacyWatcher = this.options?.enableLegacyRecursiveWatcher || product.quality === 'stable';
+					if (enableLegacyWatcher) {
+						if (isLinux) {
 							watcherImpl = UnixWatcherService;
+						} else {
+							watcherImpl = NsfwWatcherService;
 						}
-					}
-
-					// Standard Watcher
-					else {
+					} else {
 						watcherImpl = ParcelWatcherService;
 					}
 				}

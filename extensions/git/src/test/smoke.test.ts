@@ -40,33 +40,52 @@ suite('git smoke test', function () {
 	let repository: Repository;
 
 	suiteSetup(async function () {
+		console.error('pasero 1');
 		fs.writeFileSync(file('app.js'), 'hello', 'utf8');
+		console.error('pasero 2');
 		fs.writeFileSync(file('index.pug'), 'hello', 'utf8');
+		console.error('pasero 3');
 		cp.execSync('git init', { cwd });
+		console.error('pasero 4');
 		cp.execSync('git config user.name testuser', { cwd });
+		console.error('pasero 5');
 		cp.execSync('git config user.email monacotools@microsoft.com', { cwd });
+		console.error('pasero 6');
 		cp.execSync('git config commit.gpgsign false', { cwd });
+		console.error('pasero 7');
 		cp.execSync('git add .', { cwd });
+		console.error('pasero 8');
 		cp.execSync('git commit -m "initial commit"', { cwd });
+		console.error('pasero 9');
 		cp.execSync('git branch -m main', { cwd });
+		console.error('pasero 10');
 
 		// make sure git is activated
 		const ext = extensions.getExtension<GitExtension>('vscode.git');
 		await ext?.activate();
+		console.error('pasero 11');
 		git = ext!.exports.getAPI(1);
+		console.error('pasero 12');
 
 		if (git.repositories.length === 0) {
+			console.error('pasero 13');
 			await eventToPromise(git.onDidOpenRepository);
+			console.error('pasero 14');
 		}
 
+		console.error('pasero 15');
 		assert.strictEqual(git.repositories.length, 1);
+		console.error('pasero 16');
 		assert.strictEqual(fs.realpathSync(git.repositories[0].rootUri.fsPath), cwd);
+		console.error('pasero 17');
 
 		repository = git.repositories[0];
 	});
 
 	test('reflects working tree changes', async function () {
+		console.error('pasero 18');
 		await commands.executeCommand('workbench.view.scm');
+		console.error('pasero 19');
 
 		const appjs = await open('app.js');
 		await type(appjs, ' world');
@@ -74,12 +93,13 @@ suite('git smoke test', function () {
 		await repository.status();
 		assert.strictEqual(repository.state.workingTreeChanges.length, 1);
 		repository.state.workingTreeChanges.some(r => r.uri.path === appjs.uri.path && r.status === Status.MODIFIED);
-
+		console.error('pasero 20');
 		fs.writeFileSync(file('newfile.txt'), '');
 		const newfile = await open('newfile.txt');
 		await type(newfile, 'hey there');
 		await newfile.save();
 		await repository.status();
+		console.error('pasero 21');
 		assert.strictEqual(repository.state.workingTreeChanges.length, 2);
 		repository.state.workingTreeChanges.some(r => r.uri.path === appjs.uri.path && r.status === Status.MODIFIED);
 		repository.state.workingTreeChanges.some(r => r.uri.path === newfile.uri.path && r.status === Status.UNTRACKED);

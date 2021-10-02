@@ -176,7 +176,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 
 				// Log the raw event before normalization or checking for ignore patterns
 				if (this.verboseLogging) {
-					this.log(`${event.type === 'create' ? '[CREATED]' : event.type === 'delete' ? '[DELETED]' : '[CHANGED]'} ${event.path}`);
+					this.log(`${event.type === 'create' ? '[ADDED]' : event.type === 'delete' ? '[DELETED]' : '[CHANGED]'} ${event.path}`);
 				}
 
 				onRawFileEvent(event.path, ParcelWatcherService.MAP_PARCEL_WATCHER_ACTION_TO_FILE_CHANGE.get(event.type)!);

@@ -13,13 +13,11 @@ import { parse, ParsedPattern } from 'vs/base/common/glob';
 import { Disposable, IDisposable } from 'vs/base/common/lifecycle';
 import { TernarySearchTree } from 'vs/base/common/map';
 import { normalizeNFC } from 'vs/base/common/normalization';
-import { dirname } from 'vs/base/common/path';
 import { isLinux, isMacintosh, isWindows } from 'vs/base/common/platform';
 import { realcaseSync, realpathSync } from 'vs/base/node/extpath';
 import { FileChangeType } from 'vs/platform/files/common/files';
 import { IWatcherService } from 'vs/platform/files/node/watcher/parcel/watcher';
 import { IDiskFileChange, ILogMessage, normalizeFileChanges, IWatchRequest } from 'vs/platform/files/node/watcher/watcher';
-import { watchFolder } from 'vs/base/node/watcher';
 
 interface IWatcher extends IDisposable {
 
@@ -84,8 +82,8 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 	private registerListeners(): void {
 
 		// Error handling on process
-		process.on('uncaughtException', error => this.onError(error));
-		process.on('unhandledRejection', error => this.onError(error));
+		process.on('uncaughtException', error => this.onUnexpectedError(error));
+		process.on('unhandledRejection', error => this.onUnexpectedError(error));
 	}
 
 	async watch(requests: IWatchRequest[]): Promise<void> {
@@ -199,7 +197,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 
 			parcelWatcherPromiseResolve(parcelWatcher);
 		}).catch(error => {
-			this.onError(error, watcher);
+			this.onUnexpectedError(error, watcher);
 
 			parcelWatcherPromiseResolve(undefined);
 		});
@@ -263,7 +261,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 		return events;
 	}
 
-	private onError(error: unknown, watcher?: IWatcher): void {
+	private onUnexpectedError(error: unknown, watcher?: IWatcher): void {
 		const msg = toErrorMessage(error);
 
 		// Specially handle ENOSPC errors that can happen when
@@ -281,76 +279,19 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 
 		// Any other error is unexpected and we should try to
 		// restart the watcher as a result to get into healthy
-		// state again.
+		// state again if possible and if not attempted too much
 		else {
-			const handled = this.onUnexpectedError(msg, watcher);
-			if (!handled) {
+			if (watcher && watcher.restarts < ParcelWatcherService.MAX_RESTARTS) {
+				if (existsSync(watcher.request.path)) {
+					this.warn(`Watcher will be restarted due to unexpected error: ${error}`, watcher);
+					this.restartWatching(watcher);
+				} else {
+					this.error(`Unexpected error: ${msg} (ESHUTDOWN: path ${watcher.request.path} no longer exists)`, watcher);
+				}
+			} else {
 				this.error(`Unexpected error: ${msg} (ESHUTDOWN)`, watcher);
 			}
 		}
-	}
-
-	private onUnexpectedError(error: string, watcher?: IWatcher): boolean {
-		if (!watcher || watcher.restarts >= ParcelWatcherService.MAX_RESTARTS) {
-			return false; // we need a watcher that has not been restarted MAX_RESTARTS times already
-		}
-
-		let handled = false;
-
-		// Just try to restart watcher now if the path still exists
-		if (existsSync(watcher.request.path)) {
-			this.warn(`Watcher will be restarted due to unexpected error: ${error}`, watcher);
-			this.restartWatching(watcher);
-
-			handled = true;
-		}
-
-		// Otherwise try to monitor the path coming back before
-		// restarting the watcher
-		else {
-			handled = this.onWatchedPathDeleted(watcher);
-		}
-
-		return handled;
-	}
-
-	private onWatchedPathDeleted(watcher: IWatcher): boolean {
-		this.warn('Watcher shutdown because watched path got deleted', watcher);
-
-		// Send a manual event given we know the root got deleted
-		this.emitEvents([{ path: watcher.request.path, type: FileChangeType.DELETED }]);
-
-		const parentPath = dirname(watcher.request.path);
-		if (existsSync(parentPath)) {
-			const disposable = watchFolder(parentPath, (type, path) => {
-				if (watcher.token.isCancellationRequested) {
-					return; // return early when disposed
-				}
-
-				// Watcher path came back! Restart watching...
-				if (path === watcher.request.path && (type === 'added' || type === 'changed')) {
-					this.warn('Watcher restarts because watched path got created again', watcher);
-
-					// Stop watching that parent folder
-					disposable.dispose();
-
-					// Send a manual event given we know the root got added again
-					this.emitEvents([{ path: watcher.request.path, type: FileChangeType.ADDED }]);
-
-					// Restart the file watching delayed
-					this.restartWatching(watcher);
-				}
-			}, error => {
-				// Ignore
-			});
-
-			// Make sure to stop watching when the watcher is disposed
-			watcher.token.onCancellationRequested(() => disposable.dispose());
-
-			return true; // handled
-		}
-
-		return false; // not handled
 	}
 
 	async stop(): Promise<void> {
@@ -375,6 +316,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			this.stopWatching(watcher.request.path);
 			this.startWatching(watcher.request, watcher.restarts + 1);
 		}, delay);
+
 		scheduler.schedule();
 		watcher.token.onCancellationRequested(() => scheduler.dispose());
 	}

@@ -172,7 +172,6 @@ flakySuite('Recursive Watcher (parcel)', () => {
 		await changeFuture;
 
 		// Change file
-		await timeout(1100); // nsfw cannot distinguish a create from a change when time period from create to change is <1s
 		changeFuture = awaitEvent(service, copiedFilepath, FileChangeType.UPDATED);
 		await Promises.writeFile(copiedFilepath, 'Hello Change');
 		await changeFuture;

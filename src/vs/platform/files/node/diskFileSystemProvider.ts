@@ -632,7 +632,7 @@ export class DiskFileSystemProvider extends Disposable implements
 
 					// Standard Watcher
 					else {
-						watcherImpl = ParcelWatcherService; //NsfwWatcherService;
+						watcherImpl = ParcelWatcherService;
 					}
 				}
 

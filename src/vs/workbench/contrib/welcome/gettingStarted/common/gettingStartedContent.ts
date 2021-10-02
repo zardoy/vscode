@@ -102,7 +102,7 @@ export const startEntries: GettingStartedStartEntryContent = [
 		title: localize('gettingStarted.openFolder.title', "Open Folder..."),
 		description: localize('gettingStarted.openFolder.description', "Open a folder to start working"),
 		icon: Codicon.folderOpened,
-		when: '!isWeb',
+		when: '!isWeb && !isMac',
 		content: {
 			type: 'startEntry',
 			command: 'workbench.action.files.openFolder',
@@ -123,7 +123,7 @@ export const startEntries: GettingStartedStartEntryContent = [
 		id: 'topLevelGitClone',
 		title: localize('gettingStarted.topLevelGitClone.title', "Clone Git Repository..."),
 		description: localize('gettingStarted.topLevelGitClone.description', "Clone a remote repository to a local folder"),
-		when: 'config.git.enabled',
+		when: 'config.git.enabled && !git.missing',
 		icon: Codicon.sourceControl,
 		content: {
 			type: 'startEntry',

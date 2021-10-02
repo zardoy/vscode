@@ -260,10 +260,9 @@ class EditorStatusContribution implements IWorkbenchContribution {
 
 	private static _severityToComboCodicon(sev: Severity): string {
 		switch (sev) {
-			// todo@jrieken
-			// case Severity.Error: return '$(error)';
-			// case Severity.Warning: return '$(warning)';
-			default: return '$(check-all)';
+			case Severity.Error: return '$(bracket-error)';
+			case Severity.Warning: return '$(bracket-dot)';
+			default: return '$(bracket)';
 		}
 	}
 

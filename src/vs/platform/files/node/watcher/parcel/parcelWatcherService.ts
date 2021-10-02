@@ -149,7 +149,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 		this.watchers.set(request.path, watcher);
 
 		// Path checks for symbolic links / wrong casing
-		const { realBasePathDiffers, realBasePathLength } = this.checkRequest(request);
+		const { realPath, realPathDiffers, realPathLength } = this.normalizePath(request);
 
 		let undeliveredFileEvents: IDiskFileChange[] = [];
 
@@ -161,7 +161,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			}
 		};
 
-		parcelWatcher.subscribe(request.path, (error, events) => {
+		parcelWatcher.subscribe(realPath, (error, events) => {
 			if (watcher.token.isCancellationRequested) {
 				return; // return early when disposed
 			}
@@ -189,13 +189,13 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			undeliveredFileEvents = [];
 
 			// Broadcast to clients normalized
-			const normalizedEvents = normalizeFileChanges(this.normalizeEvents(undeliveredFileEventsToEmit, request, realBasePathDiffers, realBasePathLength));
+			const normalizedEvents = normalizeFileChanges(this.normalizeEvents(undeliveredFileEventsToEmit, request, realPathDiffers, realPathLength));
 			this.emitEvents(normalizedEvents);
 		}, {
 			backend: ParcelWatcherService.PARCEL_WATCHER_BACKEND,
 			ignore: watcher.request.excludes
 		}).then(async parcelWatcher => {
-			this.debug(`Started watching: ${request.path}`);
+			this.debug(`Started watching: ${realPath}`);
 
 			parcelWatcherPromiseResolve(parcelWatcher);
 		}).catch(error => {
@@ -218,51 +218,45 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 		}
 	}
 
-	private checkRequest(request: IWatchRequest): { realBasePathDiffers: boolean, realBasePathLength: number } {
-		let realBasePathDiffers = false;
-		let realBasePathLength = request.path.length;
+	private normalizePath(request: IWatchRequest): { realPath: string, realPathDiffers: boolean, realPathLength: number } {
+		let realPath = request.path;
+		let realPathDiffers = false;
+		let realPathLength = request.path.length;
 
-		// macOS: Parcel will report paths in their dereferenced and real casing
-		// form, so we need to detect this early on to be able to rewrite the
-		// file events to the original requested form.
-		// Note: Other platforms do not seem to have these path issues.
-		// TODO@watcher test this on all platforms to validate it still holds true
-		if (isMacintosh) {
-			try {
+		try {
 
-				// First check for symbolic link
-				let realBasePath = realpathSync(request.path);
+			// First check for symbolic link
+			realPath = realpathSync(request.path);
 
-				// Second check for casing difference
-				if (request.path === realBasePath) {
-					realBasePath = (realcaseSync(request.path) || request.path);
-				}
-
-				if (request.path !== realBasePath) {
-					realBasePathLength = realBasePath.length;
-					realBasePathDiffers = true;
-
-					this.warn(`correcting a path to watch that seems to be a symbolic link (original: ${request.path}, real: ${realBasePath})`);
-				}
-			} catch (error) {
-				// ignore
+			// Second check for casing difference
+			if (request.path === realPath) {
+				realPath = realcaseSync(request.path) ?? request.path;
 			}
+
+			if (request.path !== realPath) {
+				realPathLength = realPath.length;
+				realPathDiffers = true;
+
+				this.warn(`correcting a path to watch that seems to be a symbolic link (original: ${request.path}, real: ${realPath})`);
+			}
+		} catch (error) {
+			// ignore
 		}
 
-		return { realBasePathDiffers, realBasePathLength };
+		return { realPath, realPathDiffers, realPathLength };
 	}
 
-	private normalizeEvents(events: IDiskFileChange[], request: IWatchRequest, realBasePathDiffers: boolean, realBasePathLength: number): IDiskFileChange[] {
-		if (isMacintosh) {
-			for (const event of events) {
+	private normalizeEvents(events: IDiskFileChange[], request: IWatchRequest, realPathDiffers: boolean, realPathLength: number): IDiskFileChange[] {
+		for (const event of events) {
 
-				// Mac uses NFD unicode form on disk, but we want NFC
+			// Mac uses NFD unicode form on disk, but we want NFC
+			if (isMacintosh) {
 				event.path = normalizeNFC(event.path);
+			}
 
-				// Convert paths back to original form in case it differs
-				if (realBasePathDiffers) {
-					event.path = request.path + event.path.substr(realBasePathLength);
-				}
+			// Convert paths back to original form in case it differs
+			if (realPathDiffers) {
+				event.path = request.path + event.path.substr(realPathLength);
 			}
 		}
 

@@ -236,16 +236,15 @@ suite('Watcher Events Normalizer', () => {
 		const added2 = uri.file('/users/data/src/ADDED');
 
 		const raw: IDiskFileChange[] = [
-			{ path: updated.fsPath, type: FileChangeType.UPDATED },
 			{ path: updated2.fsPath, type: FileChangeType.UPDATED },
-			{ path: added.fsPath, type: FileChangeType.ADDED },
+			{ path: updated.fsPath, type: FileChangeType.UPDATED },
 			{ path: added2.fsPath, type: FileChangeType.ADDED },
+			{ path: added.fsPath, type: FileChangeType.ADDED },
 		];
 
 		watch.onDidFilesChange(({ event: e, raw }) => {
 			assert.ok(e);
 			assert.strictEqual(raw.length, 4);
-
 
 			for (const r of raw) {
 				if (isEqual(r.resource, updated)) {

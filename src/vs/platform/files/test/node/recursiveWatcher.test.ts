@@ -191,7 +191,7 @@ flakySuite('Recursive Watcher', () => {
 		await changeFuture;
 	});
 
-	(runWatchTests ? test : test.skip)('subsequent watch updates watchers', async function () {
+	(runWatchTests ? test : test.skip)('subsequent watch updates watchers (path)', async function () {
 		await service.watch([{ path: testDir, excludes: ['**/*.js'] }]);
 
 		// New file (*.txt)
@@ -210,6 +210,19 @@ flakySuite('Recursive Watcher', () => {
 		await service.watch([{ path: join(testDir, 'deep'), excludes: [] }]);
 		newTextFilePath = join(testDir, 'deep', 'newFile3.txt');
 		changeFuture = awaitEvent(service, newTextFilePath, FileChangeType.ADDED);
+		await Promises.writeFile(newTextFilePath, 'Hello World');
+		await changeFuture;
+
+		return service.stop();
+	});
+
+	(runWatchTests ? test : test.skip)('subsequent watch updates watchers (excludes)', async function () {
+		await service.watch([{ path: testDir, excludes: [realpathSync(testDir)] }]);
+		await service.watch([{ path: testDir, excludes: [] }]);
+
+		// New file (*.txt)
+		let newTextFilePath = join(testDir, 'deep', 'newFile.txt');
+		let changeFuture: Promise<unknown> = awaitEvent(service, newTextFilePath, FileChangeType.ADDED);
 		await Promises.writeFile(newTextFilePath, 'Hello World');
 		await changeFuture;
 

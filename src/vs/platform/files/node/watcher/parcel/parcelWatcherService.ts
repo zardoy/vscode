@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// eslint-disable-next-line code-import-patterns
 import * as parcelWatcher from '@parcel/watcher';
 import { existsSync } from 'fs';
 import { RunOnceScheduler } from 'vs/base/common/async';
@@ -18,7 +17,7 @@ import { dirname } from 'vs/base/common/path';
 import { isLinux, isMacintosh, isWindows } from 'vs/base/common/platform';
 import { realcaseSync, realpathSync } from 'vs/base/node/extpath';
 import { FileChangeType } from 'vs/platform/files/common/files';
-import { IWatcherService } from 'vs/platform/files/node/watcher/nsfw/watcher';
+import { IWatcherService } from 'vs/platform/files/node/watcher/parcel/watcher';
 import { IDiskFileChange, ILogMessage, normalizeFileChanges, IWatchRequest } from 'vs/platform/files/node/watcher/watcher';
 import { watchFolder } from 'vs/base/node/watcher';
 
@@ -96,13 +95,19 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 
 		// Gather paths that we should start watching
 		const requestsToStartWatching = normalizedRequests.filter(request => {
-			return !this.watchers.has(request.path);
+			const watcher = this.watchers.get(request.path);
+			if (!watcher) {
+				return true; // not yet watching that path
+			}
+
+			// Re-watch path if excludes have changed
+			return watcher.request.excludes !== request.excludes;
 		});
 
 		// Gather paths that we should stop watching
-		const pathsToStopWatching = Array.from(this.watchers.keys()).filter(watchedPath => {
-			return !normalizedRequests.find(normalizedRequest => normalizedRequest.path === watchedPath);
-		});
+		const pathsToStopWatching = Array.from(this.watchers.values()).filter(({ request }) => {
+			return !normalizedRequests.find(normalizedRequest => normalizedRequest.path === request.path && normalizedRequest.excludes === request.excludes);
+		}).map(({ request }) => request.path);
 
 		// Logging
 		this.debug(`Request to start watching: ${requestsToStartWatching.map(request => `${request.path} (excludes: ${request.excludes})`).join(',')}`);
@@ -116,15 +121,6 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 		// Start watching as instructed
 		for (const request of requestsToStartWatching) {
 			this.startWatching(request);
-		}
-
-		// Update ignore rules for all watchers
-		for (const request of normalizedRequests) {
-			const watcher = this.watchers.get(request.path);
-			if (watcher) {
-				watcher.request = request;
-				watcher.ignored = this.toExcludePatterns(request.excludes);
-			}
 		}
 	}
 
@@ -171,7 +167,6 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			}
 
 			if (error) {
-				// TODO@watcher what error can this be?
 				this.error(`Unexpected error in event callback: ${toErrorMessage(error)}`, watcher);
 			}
 
@@ -198,7 +193,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			this.emitEvents(normalizedEvents);
 		}, {
 			backend: ParcelWatcherService.PARCEL_WATCHER_BACKEND,
-			ignore: watcher.request.excludes // TODO@watcher this cannot be updated dynamically it seems
+			ignore: watcher.request.excludes
 		}).then(async parcelWatcher => {
 			this.debug(`Started watching: ${request.path}`);
 

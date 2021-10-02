@@ -171,7 +171,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			}
 
 			if (events.length === 0) {
-				return; // this can happen if we had an error before
+				return; // assume this can happen if we had an error before
 			}
 
 			for (const event of events) {
@@ -199,7 +199,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 
 			parcelWatcherPromiseResolve(parcelWatcher);
 		}).catch(error => {
-			this.onError(error);
+			this.onError(error, watcher);
 
 			parcelWatcherPromiseResolve(undefined);
 		});

@@ -15,7 +15,7 @@ import { FileChangeType } from 'vs/platform/files/common/files';
 import { ParcelWatcherService } from 'vs/platform/files/node/watcher/parcel/parcelWatcherService';
 import { IWatchRequest } from 'vs/platform/files/node/watcher/watcher';
 
-flakySuite('Recursive Watcher', () => {
+flakySuite('Recursive Watcher (parcel)', () => {
 
 	class TestParcelWatcherService extends ParcelWatcherService {
 

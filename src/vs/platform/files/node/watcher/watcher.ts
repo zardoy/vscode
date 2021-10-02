@@ -73,7 +73,11 @@ class EventNormalizer {
 
 			// macOS/Windows: track renames to different case but
 			// same name by changing current event to DELETED
-			if (existingEvent.path !== event.path && (newChangeType === FileChangeType.ADDED || newChangeType === FileChangeType.UPDATED)) {
+			// this encodes some underlying knowledge about the
+			// file watcher being used by assuming we first get
+			// an event for the CREATE and then an event that we
+			// consider as DELETE if same name / different case.
+			if (existingEvent.path !== event.path) {
 				event.type = FileChangeType.DELETED;
 				keepEvent = true;
 			}

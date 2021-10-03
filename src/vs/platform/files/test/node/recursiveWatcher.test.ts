@@ -185,7 +185,7 @@ flakySuite('Recursive Watcher (parcel)', () => {
 	});
 
 	test('subsequent watch updates watchers (path)', async function () {
-		await service.watch([{ path: testDir, excludes: ['**/*.js'] }]);
+		await service.watch([{ path: testDir, excludes: [join(realpathSync(testDir), 'unrelated')] }]);
 
 		// New file (*.txt)
 		let newTextFilePath = join(testDir, 'deep', 'newFile.txt');
@@ -193,13 +193,13 @@ flakySuite('Recursive Watcher (parcel)', () => {
 		await Promises.writeFile(newTextFilePath, 'Hello World');
 		await changeFuture;
 
-		await service.watch([{ path: join(testDir, 'deep'), excludes: ['**/*.js'] }]);
+		await service.watch([{ path: join(testDir, 'deep'), excludes: [join(realpathSync(testDir), 'unrelated')] }]);
 		newTextFilePath = join(testDir, 'deep', 'newFile2.txt');
 		changeFuture = awaitEvent(service, newTextFilePath, FileChangeType.ADDED);
 		await Promises.writeFile(newTextFilePath, 'Hello World');
 		await changeFuture;
 
-		await service.watch([{ path: join(testDir, 'deep'), excludes: ['**/*.txt'] }]);
+		await service.watch([{ path: join(testDir, 'deep'), excludes: [realpathSync(testDir)] }]);
 		await service.watch([{ path: join(testDir, 'deep'), excludes: [] }]);
 		newTextFilePath = join(testDir, 'deep', 'newFile3.txt');
 		changeFuture = awaitEvent(service, newTextFilePath, FileChangeType.ADDED);

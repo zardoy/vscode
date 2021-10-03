@@ -50,13 +50,13 @@ interface IWatcher extends IDisposable {
 
 export class ParcelWatcherService extends Disposable implements IWatcherService {
 
-	private static readonly MAX_RESTARTS = 5; // number of restarts we allow before giving up in case of unexpected shutdown
+	private static readonly MAX_RESTARTS = 5; // number of restarts we allow before giving up in case of unexpected errors
 
 	private static readonly MAP_PARCEL_WATCHER_ACTION_TO_FILE_CHANGE = new Map<parcelWatcher.EventType, number>(
 		[
 			['create', FileChangeType.ADDED],
 			['update', FileChangeType.UPDATED],
-			['delete', FileChangeType.DELETED],
+			['delete', FileChangeType.DELETED]
 		]
 	);
 
@@ -152,10 +152,16 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 		let undeliveredFileEvents: IDiskFileChange[] = [];
 
 		const onRawFileEvent = (path: string, type: FileChangeType) => {
+			if (this.verboseLogging) {
+				this.log(`${type === FileChangeType.ADDED ? '[ADDED]' : type === FileChangeType.DELETED ? '[DELETED]' : '[CHANGED]'} ${path}`);
+			}
+
 			if (!this.isPathIgnored(path, watcher.ignored)) {
 				undeliveredFileEvents.push({ type, path });
-			} else if (this.verboseLogging) {
-				this.log(` >> ignored ${path}`);
+			} else {
+				if (this.verboseLogging) {
+					this.log(` >> ignored ${path}`);
+				}
 			}
 		};
 
@@ -173,12 +179,6 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			}
 
 			for (const event of events) {
-
-				// Log the raw event before normalization or checking for ignore patterns
-				if (this.verboseLogging) {
-					this.log(`${event.type === 'create' ? '[ADDED]' : event.type === 'delete' ? '[DELETED]' : '[CHANGED]'} ${event.path}`);
-				}
-
 				onRawFileEvent(event.path, ParcelWatcherService.MAP_PARCEL_WATCHER_ACTION_TO_FILE_CHANGE.get(event.type)!);
 			}
 
@@ -286,10 +286,10 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 					this.warn(`Watcher will be restarted due to unexpected error: ${error}`, watcher);
 					this.restartWatching(watcher);
 				} else {
-					this.error(`Unexpected error: ${msg} (ESHUTDOWN: path ${watcher.request.path} no longer exists)`, watcher);
+					this.error(`Unexpected error: ${msg} (EUNKNOWN: path ${watcher.request.path} no longer exists)`, watcher);
 				}
 			} else {
-				this.error(`Unexpected error: ${msg} (ESHUTDOWN)`, watcher);
+				this.error(`Unexpected error: ${msg} (EUNKNOWN)`, watcher);
 			}
 		}
 	}

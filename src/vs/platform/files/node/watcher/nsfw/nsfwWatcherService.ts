@@ -311,7 +311,7 @@ export class NsfwWatcherService extends Disposable implements IWatcherService {
 		else {
 			const handled = this.onUnexpectedError(msg, watcher);
 			if (!handled) {
-				this.error(`Unexpected error: ${msg} (ESHUTDOWN)`, watcher);
+				this.error(`Unexpected error: ${msg} (EUNKNOWN)`, watcher);
 			}
 		}
 	}

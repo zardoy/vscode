@@ -85,9 +85,7 @@ flakySuite('Recursive Watcher (parcel)', () => {
 		});
 	}
 
-	const runWatchTests = process.env['BUILD_SOURCEVERSION'] || process.env['CI'] || !!process.env['VSCODE_RUN_RECURSIVE_WATCH_TESTS'];
-
-	(runWatchTests ? test : test.skip)('basics', async function () {
+	test('basics', async function () {
 		await service.watch([{ path: testDir, excludes: [] }]);
 
 		// New file
@@ -186,7 +184,7 @@ flakySuite('Recursive Watcher (parcel)', () => {
 		await changeFuture;
 	});
 
-	(runWatchTests ? test : test.skip)('subsequent watch updates watchers (path)', async function () {
+	test('subsequent watch updates watchers (path)', async function () {
 		await service.watch([{ path: testDir, excludes: ['**/*.js'] }]);
 
 		// New file (*.txt)
@@ -211,7 +209,7 @@ flakySuite('Recursive Watcher (parcel)', () => {
 		return service.stop();
 	});
 
-	(runWatchTests ? test : test.skip)('subsequent watch updates watchers (excludes)', async function () {
+	test('subsequent watch updates watchers (excludes)', async function () {
 		await service.watch([{ path: testDir, excludes: [realpathSync(testDir)] }]);
 		await service.watch([{ path: testDir, excludes: [] }]);
 
@@ -224,7 +222,7 @@ flakySuite('Recursive Watcher (parcel)', () => {
 		return service.stop();
 	});
 
-	((isWindows /* windows: cannot create file symbolic link without elevated context */ || !runWatchTests) ? test.skip : test)('symlink support (root)', async function () {
+	(isWindows /* windows: cannot create file symbolic link without elevated context */ ? test.skip : test)('symlink support (root)', async function () {
 		const link = join(testDir, 'deep-linked');
 		const linkTarget = join(testDir, 'deep');
 		await Promises.symlink(linkTarget, link);
@@ -238,7 +236,7 @@ flakySuite('Recursive Watcher (parcel)', () => {
 		await changeFuture;
 	});
 
-	((isWindows /* windows: cannot create file symbolic link without elevated context */ || !runWatchTests) ? test.skip : test)('symlink support (via extra watch)', async function () {
+	(isWindows /* windows: cannot create file symbolic link without elevated context */ ? test.skip : test)('symlink support (via extra watch)', async function () {
 		const link = join(testDir, 'deep-linked');
 		const linkTarget = join(testDir, 'deep');
 		await Promises.symlink(linkTarget, link);
@@ -252,7 +250,7 @@ flakySuite('Recursive Watcher (parcel)', () => {
 		await changeFuture;
 	});
 
-	((isLinux /* linux: is case sensitive */ || !runWatchTests) ? test.skip : test)('wrong casing', async function () {
+	(isLinux /* linux: is case sensitive */ ? test.skip : test)('wrong casing', async function () {
 		const deepWrongCasedPath = join(testDir, 'DEEP');
 
 		await service.watch([{ path: deepWrongCasedPath, excludes: [] }]);

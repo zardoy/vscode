@@ -7,7 +7,7 @@ import { Color } from 'vs/base/common/color';
 import { Emitter } from 'vs/base/common/event';
 import { Disposable, DisposableStore, IDisposable, IReference, MutableDisposable } from 'vs/base/common/lifecycle';
 import { Range } from 'vs/editor/common/core/range';
-import { BracketPair, BracketPairColorizationOptions, IModelDecoration } from 'vs/editor/common/model';
+import { BracketPair, BracketPairColorizationOptions, IBracketPairs, IModelDecoration } from 'vs/editor/common/model';
 import { DenseKeyProvider } from 'vs/editor/common/model/bracketPairColorizer/smallImmutableSet';
 import { DecorationProvider } from 'vs/editor/common/model/decorationProvider';
 import { BackgroundTokenizationState, TextModel } from 'vs/editor/common/model/textModel';
@@ -24,14 +24,6 @@ import { LanguageAgnosticBracketTokens } from './brackets';
 import { Length, lengthAdd, lengthGreaterThanEqual, lengthLessThanEqual, lengthOfString, lengthsToRange, lengthZero, positionToLength, toLength } from './length';
 import { parseDocument } from './parser';
 import { FastTokenizer, TextBufferTokenizer } from './tokenizer';
-
-export interface IBracketPairs {
-	/**
-	 * Gets all bracket pairs that intersect the given position.
-	 * The result is sorted by the start position.
-	 */
-	getBracketPairsInRange(range: Range): BracketPair[];
-}
 
 export class BracketPairColorizer extends Disposable implements DecorationProvider, IBracketPairs {
 	private readonly didChangeDecorationsEmitter = new Emitter<void>();

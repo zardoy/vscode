@@ -1331,6 +1331,20 @@ export interface ITextModel {
 	 * @internal
 	*/
 	getLineIndentColumn(lineNumber: number): number;
+
+	/**
+	 * Returns an object that can be used to query brackets.
+	 * @internal
+	*/
+	get bracketPairs(): IBracketPairs;
+}
+
+export interface IBracketPairs {
+	/**
+	 * Gets all bracket pairs that intersect the given position.
+	 * The result is sorted by the start position.
+	 */
+	getBracketPairsInRange(range: Range): BracketPair[];
 }
 
 /**

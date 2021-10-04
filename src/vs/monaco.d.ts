@@ -2052,6 +2052,14 @@ declare namespace monaco.editor {
 		isAttachedToEditor(): boolean;
 	}
 
+	export interface IBracketPairs {
+		/**
+		 * Gets all bracket pairs that intersect the given position.
+		 * The result is sorted by the start position.
+		 */
+		getBracketPairsInRange(range: Range): BracketPair[];
+	}
+
 	/**
 	 * A builder and helper for edit operations for a command.
 	 */

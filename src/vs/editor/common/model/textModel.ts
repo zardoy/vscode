@@ -40,7 +40,7 @@ import { Constants } from 'vs/base/common/uint';
 import { PieceTreeTextBuffer } from 'vs/editor/common/model/pieceTreeTextBuffer/pieceTreeTextBuffer';
 import { listenStream } from 'vs/base/common/stream';
 import { ArrayQueue, findLast } from 'vs/base/common/arrays';
-import { BracketPairColorizer, IBracketPairs } from 'vs/editor/common/model/bracketPairColorizer/bracketPairColorizer';
+import { BracketPairColorizer } from 'vs/editor/common/model/bracketPairColorizer/bracketPairColorizer';
 import { DecorationProvider } from 'vs/editor/common/model/decorationProvider';
 import { CursorColumns } from 'vs/editor/common/controller/cursorColumns';
 
@@ -313,7 +313,7 @@ export class TextModel extends Disposable implements model.ITextModel, IDecorati
 	//#endregion
 
 	private readonly _bracketPairColorizer: BracketPairColorizer;
-	public get bracketPairs(): IBracketPairs { return this._bracketPairColorizer; }
+	public get bracketPairs(): model.IBracketPairs { return this._bracketPairColorizer; }
 
 	private _backgroundTokenizationState = BackgroundTokenizationState.Uninitialized;
 	public get backgroundTokenizationState(): BackgroundTokenizationState {

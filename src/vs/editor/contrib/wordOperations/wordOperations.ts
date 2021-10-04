@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { flatten } from 'vs/base/common/arrays';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { EditorAction, EditorCommand, ICommandOptions, registerEditorAction, registerEditorCommand, ServicesAccessor } from 'vs/editor/browser/editorExtensions';
@@ -342,8 +343,8 @@ export abstract class DeleteWordCommand extends EditorCommand {
 		const autoClosingPairs = LanguageConfigurationRegistry.getAutoClosingPairs(model.getLanguageIdentifier().id);
 		const viewModel = editor._getViewModel();
 
-		const commands = selections.map((sel) => {
-			const deleteRange = this._delete({
+		const commands = flatten(selections.map((sel) => {
+			const deleteRanges = this._delete({
 				wordSeparators,
 				model,
 				selection: sel,
@@ -352,38 +353,47 @@ export abstract class DeleteWordCommand extends EditorCommand {
 				autoClosingBrackets,
 				autoClosingQuotes,
 				autoClosingPairs,
-				autoClosedCharacters: viewModel.getCursorAutoClosedCharacters()
+				autoClosedCharacters: viewModel.getCursorAutoClosedCharacters(),
+				deleteBracketPair: Boolean(args.deleteBracketPair)
 			}, this._wordNavigationType);
-			return new ReplaceCommand(deleteRange, '');
-		});
+			return deleteRanges.map(range => new ReplaceCommand(range, ''));
+		}));
 
 		editor.pushUndoStop();
 		editor.executeCommands(this.id, commands);
 		editor.pushUndoStop();
 	}
 
-	protected abstract _delete(ctx: DeleteWordContext, wordNavigationType: WordNavigationType): Range;
+	protected abstract _delete(ctx: DeleteWordContext, wordNavigationType: WordNavigationType): Range[];
 }
 
 export class DeleteWordLeftCommand extends DeleteWordCommand {
-	protected _delete(ctx: DeleteWordContext, wordNavigationType: WordNavigationType): Range {
+	protected _delete(ctx: DeleteWordContext, wordNavigationType: WordNavigationType): Range[] {
+		const brackets = ctx.model.bracketPairs.getBracketPairsInRange(Range.fromPositions(ctx.selection.getStartPosition()));
+		const lastBracket = brackets[brackets.length - 1];
+		if (lastBracket) {
+			if (lastBracket.closingBracketRange && lastBracket.closingBracketRange.getEndPosition().equals(ctx.selection.getStartPosition())) {
+				return [lastBracket.closingBracketRange];//, lastBracket.openingBracketRange];
+			}
+		}
+
 		let r = WordOperations.deleteWordLeft(ctx, wordNavigationType);
 		if (r) {
-			return r;
+			return [r];
 		}
-		return new Range(1, 1, 1, 1);
+		return [new Range(1, 1, 1, 1)];
 	}
 }
 
 export class DeleteWordRightCommand extends DeleteWordCommand {
-	protected _delete(ctx: DeleteWordContext, wordNavigationType: WordNavigationType): Range {
+	protected _delete(ctx: DeleteWordContext, wordNavigationType: WordNavigationType): Range[] {
 		let r = WordOperations.deleteWordRight(ctx, wordNavigationType);
 		if (r) {
-			return r;
+			return [r];
 		}
 		const lineCount = ctx.model.getLineCount();
 		const maxColumn = ctx.model.getLineMaxColumn(lineCount);
-		return new Range(lineCount, maxColumn, lineCount, maxColumn);
+		return [new Range(lineCount, maxColumn, lineCount, maxColumn)];
 	}
 }
 

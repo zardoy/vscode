@@ -13,7 +13,9 @@ import { parse, ParsedPattern } from 'vs/base/common/glob';
 import { Disposable, IDisposable } from 'vs/base/common/lifecycle';
 import { TernarySearchTree } from 'vs/base/common/map';
 import { normalizeNFC } from 'vs/base/common/normalization';
+import { isAbsolute, join, normalize, sep } from 'vs/base/common/path';
 import { isLinux, isMacintosh, isWindows } from 'vs/base/common/platform';
+import { rtrim } from 'vs/base/common/strings';
 import { realcaseSync, realpathSync } from 'vs/base/node/extpath';
 import { FileChangeType } from 'vs/platform/files/common/files';
 import { IWatcherService } from 'vs/platform/files/node/watcher/parcel/watcher';
@@ -59,6 +61,16 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			['delete', FileChangeType.DELETED]
 		]
 	);
+
+	private static readonly GLOB_MARKERS = {
+		Star: '*',
+		GlobStar: '**',
+		GlobStarPathStartPosix: '**/',
+		GlobStarPathEndPosix: '/**',
+		StarPathEndPosix: '/*',
+		GlobStarPathStartWindows: '**\\',
+		GlobStarPathEndWindows: '\\**'
+	};
 
 	private static readonly PARCEL_WATCHER_BACKEND = isWindows ? 'windows' : isLinux ? 'inotify' : 'fs-events';
 
@@ -126,6 +138,87 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 		return Array.isArray(excludes) ? excludes.map(exclude => parse(exclude)) : [];
 	}
 
+	protected toExcludePaths(path: string, excludes: string[] | undefined): string[] | undefined {
+		if (!Array.isArray(excludes)) {
+			return undefined;
+		}
+
+		const excludePaths = new Set<string>();
+
+		// Parcel watcher currently does not support glob patterns
+		// for native exclusions. As long as that is the case, try
+		// to convert exclude patterns into absolute paths that the
+		// watcher supports natively to reduce the overhead at the
+		// level of the file watcher as much as possible.
+		// Refs: https://github.com/parcel-bundler/watcher/issues/64
+		for (const exclude of excludes) {
+			const isGlob = exclude.includes(ParcelWatcherService.GLOB_MARKERS.Star);
+
+			// Glob pattern: check for typical patterns and convert
+			let normalizedExclude: string | undefined = undefined;
+			if (isGlob) {
+
+				// Examples: **
+				if (exclude === ParcelWatcherService.GLOB_MARKERS.GlobStar) {
+					normalizedExclude = path;
+				}
+
+				// Examples:
+				// - **/node_modules/**
+				// - **/.git/objects/**
+				// - **/build-folder
+				// - output/**
+				else {
+					const startsWithGlobStar = exclude.startsWith(ParcelWatcherService.GLOB_MARKERS.GlobStarPathStartPosix) || exclude.startsWith(ParcelWatcherService.GLOB_MARKERS.GlobStarPathStartWindows);
+					const endsWithGlobStar = exclude.endsWith(ParcelWatcherService.GLOB_MARKERS.GlobStarPathEndPosix) || exclude.endsWith(ParcelWatcherService.GLOB_MARKERS.GlobStarPathEndWindows);
+					if (startsWithGlobStar || endsWithGlobStar) {
+						if (startsWithGlobStar && endsWithGlobStar) {
+							normalizedExclude = exclude.substring(ParcelWatcherService.GLOB_MARKERS.GlobStarPathStartPosix.length, exclude.length - ParcelWatcherService.GLOB_MARKERS.GlobStarPathEndPosix.length);
+						} else if (startsWithGlobStar) {
+							normalizedExclude = exclude.substring(ParcelWatcherService.GLOB_MARKERS.GlobStarPathStartPosix.length);
+						} else {
+							normalizedExclude = exclude.substring(0, exclude.length - ParcelWatcherService.GLOB_MARKERS.GlobStarPathEndPosix.length);
+						}
+					}
+
+					// Support even more glob patterns on Linux where we know
+					// that each folder requires a file handle to watch.
+					// Examples:
+					// - node_modules/* (full form: **/node_modules/*/**)
+					if (isLinux && normalizedExclude) {
+						const endsWithStar = normalizedExclude?.endsWith(ParcelWatcherService.GLOB_MARKERS.StarPathEndPosix);
+						if (endsWithStar) {
+							normalizedExclude = normalizedExclude.substring(0, normalizedExclude.length - ParcelWatcherService.GLOB_MARKERS.StarPathEndPosix.length);
+						}
+					}
+				}
+			}
+
+			// Not a glob pattern, take as is
+			else {
+				normalizedExclude = exclude;
+			}
+
+			if (!normalizedExclude || normalizedExclude.includes(ParcelWatcherService.GLOB_MARKERS.Star)) {
+				continue; // skip for parcel (will be applied later by our glob matching)
+			}
+
+			// Not a glob pattern: check for absolute or convert
+			// to absolute path otherwise
+			if (isAbsolute(normalizedExclude)) {
+				excludePaths.add(rtrim(normalize(normalizedExclude), sep));
+			} else {
+				excludePaths.add(rtrim(join(path, normalizedExclude), sep));
+			}
+		}
+
+		if (excludePaths.size > 0) {
+			return Array.from(excludePaths);
+		}
+
+		return undefined;
+	}
+
 	private startWatching(request: IWatchRequest, restarts = 0): void {
 		const cts = new CancellationTokenSource();
 
@@ -165,6 +258,7 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			}
 		};
 
+		const ignore = this.toExcludePaths(realPath, watcher.request.excludes);
 		parcelWatcher.subscribe(realPath, (error, events) => {
 			if (watcher.token.isCancellationRequested) {
 				return; // return early when disposed
@@ -191,9 +285,9 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			this.emitEvents(normalizedEvents);
 		}, {
 			backend: ParcelWatcherService.PARCEL_WATCHER_BACKEND,
-			ignore: watcher.request.excludes
+			ignore
 		}).then(async parcelWatcher => {
-			this.debug(`Started watching: ${realPath}`);
+			this.debug(`Started watching: '${realPath}' with backend '${ParcelWatcherService.PARCEL_WATCHER_BACKEND}' and native excludes '${ignore?.join(', ')}'`);
 
 			parcelWatcherPromiseResolve(parcelWatcher);
 		}).catch(error => {

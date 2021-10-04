@@ -6696,7 +6696,7 @@ declare namespace monaco.languages {
 	}
 
 	export interface InlayHintsProvider {
-		onDidChangeInlayHints?: IEvent<void> | undefined;
+		onDidChangeInlayHints?: IEvent<void | Uri>;
 		provideInlayHints(model: editor.ITextModel, range: Range, token: CancellationToken): ProviderResult<InlayHint[]>;
 	}
 

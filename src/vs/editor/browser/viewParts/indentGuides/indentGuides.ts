@@ -12,7 +12,7 @@ import * as viewEvents from 'vs/editor/common/view/viewEvents';
 import { registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { EditorOption, InternalGuidesOptions } from 'vs/editor/common/config/editorOptions';
 import { Position } from 'vs/editor/common/core/position';
-import { IndentGuide } from 'vs/editor/common/model';
+import { HorizontalGuidesState, IndentGuide } from 'vs/editor/common/model';
 import { ArrayQueue } from 'vs/base/common/arrays';
 import { BracketPairGuidesClassNames } from 'vs/editor/common/model/textModel';
 import { Color } from 'vs/base/common/color';
@@ -155,14 +155,20 @@ export class IndentGuidesOverlay extends DynamicViewOverlay {
 		visibleEndLineNumber: number,
 		activeCursorPosition: Position | null
 	): IndentGuide[][] {
-		const bracketGuides = this._bracketPairGuideOptions.bracketPairs
+		const bracketGuides = this._bracketPairGuideOptions.bracketPairs !== 'off'
 			? this._context.model.getBracketGuidesInRangeByLine(
 				visibleStartLineNumber,
 				visibleEndLineNumber,
 				activeCursorPosition,
-				true,
-				true,
-				false
+				{
+					highlightActive: this._bracketPairGuideOptions.highlightActiveBracketPair,
+					horizontalGuides: this._bracketPairGuideOptions.bracketPairsVertical === 'on'
+						? HorizontalGuidesState.Enabled
+						: this._bracketPairGuideOptions.bracketPairsVertical === 'active'
+							? HorizontalGuidesState.EnabledForActive
+							: HorizontalGuidesState.Disabled,
+					includeInactive: this._bracketPairGuideOptions.bracketPairs === 'on',
+				}
 			)
 			: null;
 

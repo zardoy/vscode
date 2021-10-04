@@ -1026,7 +1026,7 @@ export interface ITextModel {
 	/**
 	 * @internal
 	 */
-	getLinesBracketGuides(startLineNumber: number, endLineNumber: number, activePosition: IPosition | null, highlightActiveGuides: boolean, includeNonActiveGuides: boolean, includeNonActiveHorizontalIndents: boolean): IndentGuide[][];
+	getLinesBracketGuides(startLineNumber: number, endLineNumber: number, activePosition: IPosition | null, options: BracketGuideOptions): IndentGuide[][];
 
 	/**
 	 * Change the decorations. The callback will be called with a change accessor
@@ -1331,6 +1331,24 @@ export interface ITextModel {
 	 * @internal
 	*/
 	getLineIndentColumn(lineNumber: number): number;
+}
+
+/**
+ * @internal
+ */
+export enum HorizontalGuidesState {
+	Disabled,
+	EnabledForActive,
+	Enabled
+}
+
+/**
+ * @internal
+ */
+export interface BracketGuideOptions {
+	includeInactive: boolean,
+	horizontalGuides: HorizontalGuidesState,
+	highlightActive: boolean,
 }
 
 /**

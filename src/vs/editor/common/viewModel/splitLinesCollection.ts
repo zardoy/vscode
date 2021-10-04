@@ -8,7 +8,7 @@ import { WrappingIndent } from 'vs/editor/common/config/editorOptions';
 import { IViewLineTokens, LineTokens } from 'vs/editor/common/core/lineTokens';
 import { IPosition, Position } from 'vs/editor/common/core/position';
 import { IRange, Range } from 'vs/editor/common/core/range';
-import { EndOfLinePreference, IActiveIndentGuideInfo, IModelDecoration, IModelDeltaDecoration, IndentGuide, IndentGuideHorizontalLine, ITextModel, PositionAffinity } from 'vs/editor/common/model';
+import { BracketGuideOptions, EndOfLinePreference, IActiveIndentGuideInfo, IModelDecoration, IModelDeltaDecoration, IndentGuide, IndentGuideHorizontalLine, ITextModel, PositionAffinity } from 'vs/editor/common/model';
 import { ModelDecorationOptions, ModelDecorationOverviewRulerOptions } from 'vs/editor/common/model/textModel';
 import * as viewEvents from 'vs/editor/common/view/viewEvents';
 import { PrefixSumIndexOfResult } from 'vs/editor/common/viewModel/prefixSumComputer';
@@ -70,7 +70,7 @@ export interface IViewModelLinesCollection extends IDisposable {
 	getViewLineCount(): number;
 	getActiveIndentGuide(viewLineNumber: number, minLineNumber: number, maxLineNumber: number): IActiveIndentGuideInfo;
 	getViewLinesIndentGuides(viewStartLineNumber: number, viewEndLineNumber: number): number[];
-	getViewLinesBracketGuides(startLineNumber: number, endLineNumber: number, activePosition: IPosition | null, highlightActiveGuides: boolean, includeNonActiveGuides: boolean, includeNonActiveHorizontalIndents: boolean): IndentGuide[][];
+	getViewLinesBracketGuides(startLineNumber: number, endLineNumber: number, activePosition: IPosition | null, options: BracketGuideOptions): IndentGuide[][];
 	getViewLineContent(viewLineNumber: number): string;
 	getViewLineLength(viewLineNumber: number): number;
 	getViewLineMinColumn(viewLineNumber: number): number;
@@ -737,7 +737,7 @@ export class SplitLinesCollection implements IViewModelLinesCollection {
 
 	// #endregion
 
-	public getViewLinesBracketGuides(viewStartLineNumber: number, viewEndLineNumber: number, activeViewPosition: IPosition | null, highlightActiveGuides: boolean, includeNonActiveGuides: boolean, includeNonActiveHorizontalIndents: boolean): IndentGuide[][] {
+	public getViewLinesBracketGuides(viewStartLineNumber: number, viewEndLineNumber: number, activeViewPosition: IPosition | null, options: BracketGuideOptions): IndentGuide[][] {
 		const modelActivePosition = activeViewPosition ? this.convertViewPositionToModelPosition(activeViewPosition.lineNumber, activeViewPosition.column) : null;
 		const resultPerViewLine: IndentGuide[][] = [];
 
@@ -748,9 +748,7 @@ export class SplitLinesCollection implements IViewModelLinesCollection {
 				modelRangeStartLineNumber,
 				group.modelRange.endLineNumber,
 				modelActivePosition,
-				highlightActiveGuides,
-				includeNonActiveGuides,
-				includeNonActiveHorizontalIndents
+				options
 			);
 
 			for (const viewLineInfo of group.viewLines) {

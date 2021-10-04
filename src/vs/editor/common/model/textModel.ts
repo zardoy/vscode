@@ -3082,12 +3082,9 @@ export class TextModel extends Disposable implements model.ITextModel, IDecorati
 		startLineNumber: number,
 		endLineNumber: number,
 		activePosition: IPosition | null,
-		highlightActiveGuides: boolean,
-		includeNonActiveGuides: boolean,
-		includeNonActiveHorizontalIndents: boolean
+		options: model.BracketGuideOptions
 	): model.IndentGuide[][] {
 		const result: model.IndentGuide[][] = [];
-
 		const bracketPairs = this._bracketPairColorizer.getBracketPairsInRange(
 			new Range(
 				startLineNumber,
@@ -3180,9 +3177,12 @@ export class TextModel extends Disposable implements model.ITextModel, IDecorati
 
 				const className =
 					colorProvider.getInlineClassNameOfLevel(line.nestingLevel) +
-					(highlightActiveGuides && isActive ? ' ' + colorProvider.activeClassName : '');
+					(options.highlightActive && isActive ? ' ' + colorProvider.activeClassName : '');
 
-				if (isActive || includeNonActiveHorizontalIndents) {
+				if (
+					(isActive && options.horizontalGuides !== model.HorizontalGuidesState.Disabled)
+					|| (options.includeInactive && options.horizontalGuides === model.HorizontalGuidesState.Enabled)
+				) {
 					if (line.start.lineNumber === lineNumber) {
 						if (line.guideVisibleColumn < line.visibleStartColumn) {
 							guides.push(new model.IndentGuide(line.guideVisibleColumn, className,
@@ -3215,14 +3215,14 @@ export class TextModel extends Disposable implements model.ITextModel, IDecorati
 				}
 				lastVisibleColumnCount = line.guideVisibleColumn;
 
-				const isActive = highlightActiveGuides && activeBracketPairRange &&
+				const isActive = options.highlightActive && activeBracketPairRange &&
 					line.bracketPair.range.equalsRange(activeBracketPairRange);
 
 				const className =
 					colorProvider.getInlineClassNameOfLevel(line.nestingLevel) +
 					(isActive ? ' ' + colorProvider.activeClassName : '');
 
-				if (isActive || includeNonActiveGuides) {
+				if (isActive || options.includeInactive) {
 					guides.push(new model.IndentGuide(line.guideVisibleColumn, className, null));
 					if (line.renderHorizontalEndLineAtTheBottom && line.end.lineNumber === lineNumber + 1) {
 						nextGuides.push(new model.IndentGuide(line.guideVisibleColumn, className, null));

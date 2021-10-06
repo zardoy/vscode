@@ -13,10 +13,11 @@ import { parse, ParsedPattern } from 'vs/base/common/glob';
 import { Disposable, IDisposable } from 'vs/base/common/lifecycle';
 import { TernarySearchTree } from 'vs/base/common/map';
 import { normalizeNFC } from 'vs/base/common/normalization';
-import { isAbsolute, join, normalize, sep } from 'vs/base/common/path';
+import { dirname, isAbsolute, join, normalize, sep } from 'vs/base/common/path';
 import { isLinux, isMacintosh, isWindows } from 'vs/base/common/platform';
 import { rtrim } from 'vs/base/common/strings';
 import { realcaseSync, realpathSync } from 'vs/base/node/extpath';
+import { watchFolder } from 'vs/base/node/watcher';
 import { FileChangeType } from 'vs/platform/files/common/files';
 import { IWatcherService } from 'vs/platform/files/node/watcher/parcel/watcher';
 import { IDiskFileChange, ILogMessage, normalizeFileChanges, IWatchRequest } from 'vs/platform/files/node/watcher/watcher';
@@ -280,9 +281,17 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			const undeliveredFileEventsToEmit = undeliveredFileEvents;
 			undeliveredFileEvents = [];
 
-			// Broadcast to clients normalized
-			const normalizedEvents = normalizeFileChanges(this.normalizeEvents(undeliveredFileEventsToEmit, request, realPathDiffers, realPathLength));
-			this.emitEvents(normalizedEvents);
+			// Normalize and detect root path deletes
+			const { events: normalizedEvents, rootDeleted } = this.normalizeEvents(undeliveredFileEventsToEmit, request, realPathDiffers, realPathLength);
+
+			// Broadcast to clients coalesced
+			const coalescedEvents = normalizeFileChanges(normalizedEvents);
+			this.emitEvents(coalescedEvents);
+
+			// Handle root path delete if confirmed from coalseced events
+			if (rootDeleted && coalescedEvents.some(event => event.path === watcher.request.path && event.type === FileChangeType.DELETED)) {
+				this.onWatchedPathDeleted(watcher);
+			}
 		}, {
 			backend: ParcelWatcherService.PARCEL_WATCHER_BACKEND,
 			ignore
@@ -338,7 +347,9 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 		return { realPath, realPathDiffers, realPathLength };
 	}
 
-	private normalizeEvents(events: IDiskFileChange[], request: IWatchRequest, realPathDiffers: boolean, realPathLength: number): IDiskFileChange[] {
+	private normalizeEvents(events: IDiskFileChange[], request: IWatchRequest, realPathDiffers: boolean, realPathLength: number): { events: IDiskFileChange[], rootDeleted: boolean } {
+		let rootDeleted = false;
+
 		for (const event of events) {
 
 			// Mac uses NFD unicode form on disk, but we want NFC
@@ -350,9 +361,46 @@ export class ParcelWatcherService extends Disposable implements IWatcherService 
 			if (realPathDiffers) {
 				event.path = request.path + event.path.substr(realPathLength);
 			}
+
+			// Check for root deleted
+			if (event.path === request.path && event.type === FileChangeType.DELETED) {
+				rootDeleted = true;
+			}
 		}
 
-		return events;
+		return { events, rootDeleted };
+	}
+
+	private onWatchedPathDeleted(watcher: IWatcher): void {
+		this.warn('Watcher shutdown because watched path got deleted', watcher);
+
+		const parentPath = dirname(watcher.request.path);
+		if (existsSync(parentPath)) {
+			const disposable = watchFolder(parentPath, (type, path) => {
+				if (watcher.token.isCancellationRequested) {
+					return; // return early when disposed
+				}
+
+				// Watcher path came back! Restart watching...
+				if (path === watcher.request.path && (type === 'added' || type === 'changed')) {
+					this.warn('Watcher restarts because watched path got created again', watcher);
+
+					// Stop watching that parent folder
+					disposable.dispose();
+
+					// Send a manual event given we know the root got added again
+					this.emitEvents([{ path: watcher.request.path, type: FileChangeType.ADDED }]);
+
+					// Restart the file watching delayed
+					this.restartWatching(watcher);
+				}
+			}, error => {
+				// Ignore
+			});
+
+			// Make sure to stop watching when the watcher is disposed
+			watcher.token.onCancellationRequested(() => disposable.dispose());
+		}
 	}
 
 	private onUnexpectedError(error: unknown, watcher?: IWatcher): void {

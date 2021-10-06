@@ -31,7 +31,10 @@ flakySuite('Recursive Watcher (parcel)', () => {
 
 		override async watch(requests: IWatchRequest[]): Promise<void> {
 			await super.watch(requests);
+			await this.whenReady();
+		}
 
+		async whenReady(): Promise<void> {
 			for (const [, watcher] of this.watchers) {
 				await watcher.instance;
 			}
@@ -76,7 +79,19 @@ flakySuite('Recursive Watcher (parcel)', () => {
 		return Promises.rm(testDir);
 	});
 
+	function toMsg(type: FileChangeType): string {
+		switch (type) {
+			case FileChangeType.ADDED: return 'added';
+			case FileChangeType.DELETED: return 'deleted';
+			default: return 'changed';
+		}
+	}
+
 	function awaitEvent(service: TestParcelWatcherService, path: string, type: FileChangeType, failOnEvent?: boolean): Promise<void> {
+		if (loggingEnabled) {
+			console.log(`Awaiting change type '${toMsg(type)}' on file '${path}'`);
+		}
+
 		return new Promise((resolve, reject) => {
 			const disposable = service.onDidChangeFile(events => {
 				for (const event of events) {
@@ -369,6 +384,36 @@ flakySuite('Recursive Watcher (parcel)', () => {
 		// New file
 		const newFilePath = join(deepWrongCasedPath, 'newFile.txt');
 		let changeFuture: Promise<unknown> = awaitEvent(service, newFilePath, FileChangeType.ADDED);
+		await Promises.writeFile(newFilePath, 'Hello World');
+		await changeFuture;
+	});
+
+	test('invalid folder does not explode', async function () {
+		const invalidPath = join(testDir, 'invalid');
+
+		await service.watch([{ path: invalidPath, excludes: [] }]);
+	});
+
+	test('deleting watched path is handled properly', async function () {
+		const watchedPath = join(testDir, 'deep');
+
+		await service.watch([{ path: watchedPath, excludes: [] }]);
+
+		// Delete watched path
+		let changeFuture: Promise<unknown> = awaitEvent(service, watchedPath, FileChangeType.DELETED);
+		await Promises.rm(watchedPath, RimRafMode.UNLINK);
+		await changeFuture;
+
+		// Restore watched path
+		changeFuture = awaitEvent(service, watchedPath, FileChangeType.ADDED);
+		await Promises.mkdir(watchedPath);
+		await changeFuture;
+
+		await service.whenReady();
+
+		// Verify events come in again
+		const newFilePath = join(watchedPath, 'newFile.txt');
+		changeFuture = awaitEvent(service, newFilePath, FileChangeType.ADDED);
 		await Promises.writeFile(newFilePath, 'Hello World');
 		await changeFuture;
 	});

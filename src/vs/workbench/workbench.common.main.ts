@@ -354,5 +354,24 @@ import 'vs/workbench/contrib/deprecatedExtensionMigrator/browser/deprecatedExten
 
 // Bracket Pair Colorizer 2 Telemetry
 import 'vs/workbench/contrib/bracketPairColorizer2Telemetry/browser/bracketPairColorizer2Telemetry.contribution';
+import { CommandsRegistry } from 'vs/platform/commands/common/commands';
+// import { MenuRegistry } from 'vs/platform/actions/common/actions';
 
 //#endregion
+
+setTimeout(() => {
+	// const name = MenuRegistry.getCommands()
+	const commandDescriptions: Record<string, any> = {}
+	for (const [commandId, command] of CommandsRegistry.getCommands()) {
+		commandDescriptions[commandId] = {
+			description: command.description,
+			args: command.description?.args?.map((arg) => ({
+				...arg,
+				// don't include functions
+				constraint: typeof arg.constraint === 'string' ? arg.constraint : undefined
+			}))
+		};
+	}
+	console.log('process.cwd()', process.cwd())
+	// require('fs').writeFileSync(p, JSON.parse({commands: commandDescriptions}))
+}, 2000)

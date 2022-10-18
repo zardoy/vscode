@@ -354,24 +354,48 @@ import 'vs/workbench/contrib/deprecatedExtensionMigrator/browser/deprecatedExten
 
 // Bracket Pair Colorizer 2 Telemetry
 import 'vs/workbench/contrib/bracketPairColorizer2Telemetry/browser/bracketPairColorizer2Telemetry.contribution';
-import { CommandsRegistry } from 'vs/platform/commands/common/commands';
-// import { MenuRegistry } from 'vs/platform/actions/common/actions';
+// import { CommandsRegistry } from 'vs/platform/commands/common/commands';
+import { MenuRegistry } from 'vs/platform/actions/common/actions';
 
 //#endregion
 
 setTimeout(() => {
 	// const name = MenuRegistry.getCommands()
-	const commandDescriptions: Record<string, any> = {}
-	for (const [commandId, command] of CommandsRegistry.getCommands()) {
-		commandDescriptions[commandId] = {
-			description: command.description,
-			args: command.description?.args?.map((arg) => ({
-				...arg,
-				// don't include functions
-				constraint: typeof arg.constraint === 'string' ? arg.constraint : undefined
-			}))
+	// const seenMap: Map<string, boolean> = new Map<string, boolean>();
+	// internal commands...
+	const writeObject: {
+		additionalCommands: Record<string, any>;
+		menuCommands: Record<string, any>;
+	} = {
+		additionalCommands: {},
+		menuCommands: {}
+	};
+	// just to include: shortTitle
+	for (let [, { id, icon: _icon, title, category, source, tooltip, precondition }] of MenuRegistry.getCommands()) {
+		if (typeof title === 'object') { title = title.value; }
+		if (typeof category === 'object') { category = category.value; }
+		if (tooltip === title) { tooltip = undefined; }
+		// const obj = {
+		// };
+		// if (Object.values(obj).every((x) => !x)) { continue; }
+		writeObject.menuCommands[id] = {
+			title: category ? `${category}: ${title}` : title,
+			source,
+			tooltip,
+			precondition: precondition?.serialize()
+			// ...obj
+			// category,
 		};
 	}
-	console.log('process.cwd()', process.cwd())
-	// require('fs').writeFileSync(p, JSON.parse({commands: commandDescriptions}))
-}, 2000)
+	// for (const [commandId, command] of CommandsRegistry.getCommands()) {
+	// 	commandDescriptions[commandId] = {
+	// 		...command.description,
+	// 		args: command.description?.args?.map((arg) => ({
+	// 			...arg,
+	// 			// don't include functions
+	// 			constraint: typeof arg.constraint === 'string' ? arg.constraint : undefined
+	// 		}))
+	// 	};
+	// }
+	require('fs').writeFileSync('./output.json', JSON.stringify(writeObject, undefined, 4), 'utf8');
+}, 2000);

@@ -356,18 +356,16 @@ import 'vs/workbench/contrib/deprecatedExtensionMigrator/browser/deprecatedExten
 import 'vs/workbench/contrib/bracketPairColorizer2Telemetry/browser/bracketPairColorizer2Telemetry.contribution';
 // import { CommandsRegistry } from 'vs/platform/commands/common/commands';
 import { MenuRegistry } from 'vs/platform/actions/common/actions';
+import { CommandsRegistry } from 'vs/platform/commands/common/commands';
 
 //#endregion
 
 setTimeout(() => {
-	// const name = MenuRegistry.getCommands()
-	// const seenMap: Map<string, boolean> = new Map<string, boolean>();
-	// internal commands...
 	const writeObject: {
-		additionalCommands: Record<string, any>;
+		otherCommands: Record<string, any>;
 		menuCommands: Record<string, any>;
 	} = {
-		additionalCommands: {},
+		otherCommands: {},
 		menuCommands: {}
 	};
 	// just to include: shortTitle
@@ -387,15 +385,16 @@ setTimeout(() => {
 			// category,
 		};
 	}
-	// for (const [commandId, command] of CommandsRegistry.getCommands()) {
-	// 	commandDescriptions[commandId] = {
-	// 		...command.description,
-	// 		args: command.description?.args?.map((arg) => ({
-	// 			...arg,
-	// 			// don't include functions
-	// 			constraint: typeof arg.constraint === 'string' ? arg.constraint : undefined
-	// 		}))
-	// 	};
-	// }
+	for (const [id, command] of CommandsRegistry.getCommands()) {
+		writeObject.otherCommands[id] = {
+			...command.description,
+			args: command.description?.args?.map((arg) => ({
+				...arg,
+				// don't include functions
+				constraint: typeof arg.constraint === 'string' ? arg.constraint : undefined
+			}))
+		};
+	}
 	require('fs').writeFileSync('./output.json', JSON.stringify(writeObject, undefined, 4), 'utf8');
+	process.exit();
 }, 2000);

@@ -481,3 +481,5 @@ function mapLocationOrLocationLink(values: (languages.Location | languages.Locat
 	}
 	return result;
 }
+
+console.log(newCommands)

@@ -2142,6 +2142,22 @@ export class Repository implements Disposable {
 	}
 
 	private _updateResourceGroupsState(resourcesGroups: GitResourceGroups): void {
+		const config = workspace.getConfiguration('git');
+		const ignoreChangesFiles = config.get<string[]>('ignoreChangesFiles')?.map(p => Uri.file(path.join(this.repository.root, p)).fsPath) ?? [];
+		const ignoreChangesFolders = config.get<string[]>('ignoreChangesFolders')?.map(p => Uri.file(path.join(this.repository.root, p)).fsPath) ?? [];
+
+		for (const resources of [resourcesGroups.workingTreeGroup, resourcesGroups.untrackedGroup]) {
+			if (!resources) { continue; }
+			for (let i = 0; i < resources.length; i++) {
+				const { fsPath } = resources[i].original;
+				if (ignoreChangesFiles.includes(fsPath) || ignoreChangesFolders.some((p) => fsPath.startsWith(p))) {
+					resources.splice(i, 1);
+					i--;
+				}
+			}
+
+		}
+
 		// set resource groups
 		if (resourcesGroups.indexGroup) { this.indexGroup.resourceStates = resourcesGroups.indexGroup; }
 		if (resourcesGroups.mergeGroup) { this.mergeGroup.resourceStates = resourcesGroups.mergeGroup; }

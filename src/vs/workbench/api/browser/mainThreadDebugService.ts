@@ -16,6 +16,9 @@ import { AbstractDebugAdapter } from 'vs/workbench/contrib/debug/common/abstract
 import { IWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
 import { convertToVSCPaths, convertToDAPaths, isSessionAttach } from 'vs/workbench/contrib/debug/common/debugUtils';
 import { ErrorNoTelemetry } from 'vs/base/common/errors';
+import { ITextModelService } from 'vs/editor/common/services/resolverService';
+import { IModelService } from 'vs/editor/common/services/model';
+import { ITextModel } from 'vs/editor/common/model';
 
 @extHostNamedCustomer(MainContext.MainThreadDebugService)
 export class MainThreadDebugService implements MainThreadDebugServiceShape, IDebugAdapterFactory {
@@ -30,7 +33,9 @@ export class MainThreadDebugService implements MainThreadDebugServiceShape, IDeb
 
 	constructor(
 		extHostContext: IExtHostContext,
-		@IDebugService private readonly debugService: IDebugService
+		@IDebugService private readonly debugService: IDebugService,
+		@ITextModelService private readonly textModelResolverService: ITextModelService,
+		@IModelService private readonly modelService: IModelService,
 	) {
 		this._proxy = extHostContext.getProxy(ExtHostContext.ExtHostDebugService);
 		this._toDispose.add(debugService.onDidNewSession(session => {
@@ -88,6 +93,26 @@ export class MainThreadDebugService implements MainThreadDebugServiceShape, IDeb
 			this._proxy.$signalActiveConfigurationChanged(true, this.debugService.getConfigurationManager().selectedConfiguration?.name);
 		});
 		this.sendBreakpointsAndListen();
+
+		let model: ITextModel | undefined;
+		const self = this;
+		this.textModelResolverService.registerTextModelContentProvider('vscode-unleashed', {
+			async provideTextContent(uri) {
+				if (!model) {
+					model = self.modelService.createModel('', null, uri);
+					const updateValue = () => {
+						if (model) {
+							model.setValue(JSON.stringify(self.debugService.getConfigurationManager().selectedConfiguration?.name, null, 4));
+						}
+					};
+					updateValue();
+					self.debugService.getConfigurationManager().onDidSelectConfiguration(() => {
+						updateValue();
+					});
+				}
+				return model;
+			},
+		});
 	}
 
 	private sendBreakpointsAndListen(): void {

@@ -24,6 +24,23 @@ function invalidateScriptCaches() {
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+	console.log('initial:', vscode.debug.selectedConfiguration); // initial Launch Extension
+
+	vscode.debug.onDidChangeSelectedConfiguration(() => {
+		console.log('changed:', vscode.debug.selectedConfiguration); // changed Launch Extension
+	});
+
+	setTimeout(() => {
+		vscode.workspace.openTextDocument(vscode.Uri.parse('vscode-unleashed://d')).then((doc) => {
+			console.log('text', doc.getText());
+		});
+	}, 2000);
+
+	// const changeLaunchName = () => {
+	// 	vscode.debug.setSelectedConfiguration('Launch Extension');
+	// };
+
+
 	configureHttpRequest();
 	context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
 		if (e.affectsConfiguration('http.proxy') || e.affectsConfiguration('http.proxyStrictSSL')) {
